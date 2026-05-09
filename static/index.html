@@ -45,7 +45,7 @@
       letter-spacing: 0.05em;
     }
 
-    select, .drop-zone {
+    select, .drop-zone, textarea {
       width: 100%;
       background: #111;
       border: 1px solid #2a2a2a;
@@ -73,6 +73,40 @@
     .drop-zone.dragover { border-color: #6c8cf7; background: #1a1f2e; color: #e8e8e8; }
 
     input[type="file"] { display: none; }
+
+    textarea {
+      padding: 0.75rem;
+      resize: vertical;
+      min-height: 120px;
+      font-family: inherit;
+      line-height: 1.5;
+    }
+
+    textarea::placeholder { color: #444; }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .tab {
+      flex: 1;
+      padding: 0.5rem;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #666;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .tab.active {
+      background: #6c8cf7;
+      border-color: #6c8cf7;
+      color: #fff;
+    }
 
     button {
       padding: 0.7rem 1rem;
@@ -111,11 +145,22 @@
     </div>
 
     <div>
-      <label>Text file</label>
+      <label>Input</label>
+      <div class="tabs">
+        <div class="tab active" id="tabFile">File</div>
+        <div class="tab" id="tabText">Paste text</div>
+      </div>
+    </div>
+
+    <div id="filePanel">
       <div class="drop-zone" id="dropZone">
         Drop a .txt file here or click to browse
         <input type="file" id="fileInput" accept=".txt" />
       </div>
+    </div>
+
+    <div id="textPanel" style="display:none">
+      <textarea id="textInput" placeholder="Paste your text here…"></textarea>
     </div>
 
     <button id="convertBtn" disabled>Convert to MP3</button>
@@ -127,11 +172,17 @@
     const voiceSelect = document.getElementById("voice");
     const dropZone = document.getElementById("dropZone");
     const fileInput = document.getElementById("fileInput");
+    const textInput = document.getElementById("textInput");
     const convertBtn = document.getElementById("convertBtn");
     const status = document.getElementById("status");
     const player = document.getElementById("player");
+    const tabFile = document.getElementById("tabFile");
+    const tabText = document.getElementById("tabText");
+    const filePanel = document.getElementById("filePanel");
+    const textPanel = document.getElementById("textPanel");
 
     let selectedFile = null;
+    let activeTab = "file";
 
     fetch("/voices")
       .then(r => r.json())
@@ -153,6 +204,28 @@
           voiceSelect.appendChild(og);
         }
       });
+
+    tabFile.addEventListener("click", () => {
+      activeTab = "file";
+      tabFile.classList.add("active");
+      tabText.classList.remove("active");
+      filePanel.style.display = "block";
+      textPanel.style.display = "none";
+      convertBtn.disabled = !selectedFile;
+    });
+
+    tabText.addEventListener("click", () => {
+      activeTab = "text";
+      tabText.classList.add("active");
+      tabFile.classList.remove("active");
+      textPanel.style.display = "block";
+      filePanel.style.display = "none";
+      convertBtn.disabled = !textInput.value.trim();
+    });
+
+    textInput.addEventListener("input", () => {
+      convertBtn.disabled = !textInput.value.trim();
+    });
 
     dropZone.addEventListener("click", () => fileInput.click());
     dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
@@ -176,14 +249,22 @@
     }
 
     convertBtn.addEventListener("click", async () => {
-      if (!selectedFile) return;
       convertBtn.disabled = true;
       status.className = "";
       status.textContent = "Converting…";
       player.style.display = "none";
 
+      let file, filename;
+      if (activeTab === "file") {
+        file = selectedFile;
+        filename = selectedFile.name;
+      } else {
+        file = new Blob([textInput.value], { type: "text/plain" });
+        filename = "output.txt";
+      }
+
       const form = new FormData();
-      form.append("file", selectedFile);
+      form.append("file", file, filename);
       form.append("voice", voiceSelect.value);
 
       try {
@@ -200,7 +281,7 @@
 
         const a = document.createElement("a");
         a.href = url;
-        a.download = selectedFile.name.replace(/\.txt$/, ".mp3");
+        a.download = filename.replace(/\.txt$/, ".mp3");
         a.click();
       } catch (e) {
         status.textContent = e.message;
