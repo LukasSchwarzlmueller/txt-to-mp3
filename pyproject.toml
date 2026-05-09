@@ -1,0 +1,14 @@
+[project]
+name = "txt-to-mp3"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "edge-tts",
+    "fastapi",
+    "uvicorn[standard]",
+    "python-multipart",
+]
+
+

@@ -1,0 +1,6 @@
+services:
+  tts:
+    build: .
+    ports:
+      - "8743:8000"
+    restart: unless-stopped
