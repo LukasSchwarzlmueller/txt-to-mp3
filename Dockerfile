@@ -1,13 +1,11 @@
-FROM python:3.11-slim
+FROM ghcr.io/astral-sh/uv:python3.11-slim
 
 WORKDIR /app
 
-RUN pip install uv
-
-COPY pyproject.toml uv.lock ./
-RUN uv sync --frozen --no-dev --no-install-project
+COPY requirements.txt ./
+RUN uv pip install --system --no-cache -r requirements.txt
 
 COPY server.py .
 COPY static/ static/
 
-CMD ["uv", "run", "uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
