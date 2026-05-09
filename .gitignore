@@ -15,3 +15,6 @@ output/*.mp3
 
 # Claude Code
 .claude/
+
+# Generated files
+requirements.txt
