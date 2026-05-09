@@ -10,12 +10,20 @@ from starlette.background import BackgroundTask
 app = FastAPI()
 
 VOICES = [
+    # German
     "de-DE-KatjaNeural",
     "de-DE-ConradNeural",
     "de-AT-IngridNeural",
     "de-AT-JonasNeural",
     "de-CH-LeniNeural",
     "de-CH-JanNeural",
+    # English
+    "en-US-AriaNeural",
+    "en-US-GuyNeural",
+    "en-GB-SoniaNeural",
+    "en-GB-RyanNeural",
+    "en-AU-NatashaNeural",
+    "en-AU-WilliamNeural",
 ]
 
 
@@ -33,13 +41,13 @@ async def tts(
     try:
         text = content.decode("utf-8").strip()
     except UnicodeDecodeError:
-        raise HTTPException(400, "Datei muss UTF-8 kodiert sein")
+        raise HTTPException(400, "File must be UTF-8 encoded")
 
     if not text:
-        raise HTTPException(400, "Datei ist leer")
+        raise HTTPException(400, "File is empty")
 
     if voice not in VOICES:
-        raise HTTPException(400, "Unbekannte Stimme")
+        raise HTTPException(400, "Unknown voice")
 
     tmp = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
     tmp_path = Path(tmp.name)

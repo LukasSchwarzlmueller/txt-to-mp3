@@ -1,43 +1,58 @@
 # txt-to-mp3
 
-Konvertiert `.txt`-Dateien in MP3-Audiodateien mit deutschen Stimmen via [edge-tts](https://github.com/rany2/edge-tts).
+Converts `.txt` files to MP3 audio using neural voices via [edge-tts](https://github.com/rany2/edge-tts). Supports German and English voices.
 
 ## Features
 
-- **CLI** (`main.py`): Verarbeitet alle `.txt`-Dateien im `input/`-Ordner und speichert die MP3s in `output/`
-- **Web-API** (`server.py`): FastAPI-Server mit Upload-Endpunkt und Stimmauswahl
-- **Docker**: Fertige `docker-compose.yml` für einfaches Deployment
+- **CLI** (`main.py`): Batch-converts all `.txt` files in the `input/` folder and saves MP3s to `output/`
+- **Web API** (`server.py`): FastAPI server with file upload endpoint and voice selection
+- **Docker**: Ready-to-use `docker-compose.yml` for easy deployment
 
-## Verfügbare Stimmen
+## Available Voices
 
-| Stimme | Region |
-|--------|--------|
-| de-DE-KatjaNeural | Deutschland (weiblich) |
-| de-DE-ConradNeural | Deutschland (männlich) |
-| de-AT-IngridNeural | Österreich (weiblich) |
-| de-AT-JonasNeural | Österreich (männlich) |
-| de-CH-LeniNeural | Schweiz (weiblich) |
-| de-CH-JanNeural | Schweiz (männlich) |
+### German
 
-## Verwendung
+| Voice | Region | Gender |
+|-------|--------|--------|
+| de-DE-KatjaNeural | Germany | Female |
+| de-DE-ConradNeural | Germany | Male |
+| de-AT-IngridNeural | Austria | Female |
+| de-AT-JonasNeural | Austria | Male |
+| de-CH-LeniNeural | Switzerland | Female |
+| de-CH-JanNeural | Switzerland | Male |
+
+### English
+
+| Voice | Region | Gender |
+|-------|--------|--------|
+| en-US-AriaNeural | US | Female |
+| en-US-GuyNeural | US | Male |
+| en-GB-SoniaNeural | UK | Female |
+| en-GB-RyanNeural | UK | Male |
+| en-AU-NatashaNeural | Australia | Female |
+| en-AU-WilliamNeural | Australia | Male |
+
+## Usage
 
 ### CLI
 
 ```bash
-# Abhängigkeiten installieren (uv)
+# Install dependencies (requires uv)
 uv sync
 
-# .txt-Dateien in input/ legen, dann:
+# Place .txt files in input/, then run:
 uv run python main.py
 ```
 
-### Web-Server
+To change the voice, edit the `VOICE` constant in [main.py](main.py).
+
+### Web Server
 
 ```bash
 uv run uvicorn server:app --reload
 ```
 
-API läuft dann auf `http://localhost:8000`.
+API available at `http://localhost:8000`.
 
 ### Docker
 
@@ -47,7 +62,20 @@ docker compose up
 
 ## API
 
-| Endpunkt | Methode | Beschreibung |
-|----------|---------|--------------|
-| `/voices` | GET | Liste der verfügbaren Stimmen |
-| `/tts` | POST | `.txt`-Datei hochladen, MP3 zurückbekommen |
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/voices` | GET | List all available voices |
+| `/tts` | POST | Upload a `.txt` file, receive an MP3 |
+
+### Example
+
+```bash
+curl -X POST http://localhost:8000/tts \
+  -F "file=@mytext.txt" \
+  -F "voice=en-US-AriaNeural" \
+  -o output.mp3
+```
+
+## License
+
+[MIT](LICENSE)
