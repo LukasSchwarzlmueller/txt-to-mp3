@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>txt-to-mp3</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #0f0f0f;
+      color: #e8e8e8;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+
+    .card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      padding: 2rem;
+      width: 100%;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    label {
+      display: block;
+      font-size: 0.8rem;
+      color: #888;
+      margin-bottom: 0.4rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    select, .drop-zone {
+      width: 100%;
+      background: #111;
+      border: 1px solid #2a2a2a;
+      border-radius: 8px;
+      color: #e8e8e8;
+      font-size: 0.95rem;
+    }
+
+    select {
+      padding: 0.6rem 0.75rem;
+      appearance: none;
+      cursor: pointer;
+    }
+
+    .drop-zone {
+      padding: 2rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      color: #555;
+      font-size: 0.9rem;
+    }
+
+    .drop-zone.has-file { color: #e8e8e8; border-color: #444; }
+    .drop-zone.dragover { border-color: #6c8cf7; background: #1a1f2e; color: #e8e8e8; }
+
+    input[type="file"] { display: none; }
+
+    button {
+      padding: 0.7rem 1rem;
+      background: #6c8cf7;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover:not(:disabled) { background: #5a7ae8; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #status {
+      font-size: 0.85rem;
+      color: #888;
+      min-height: 1.2em;
+      text-align: center;
+    }
+
+    #status.error { color: #f77; }
+
+    audio { width: 100%; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>txt-to-mp3</h1>
+
+    <div>
+      <label for="voice">Voice</label>
+      <select id="voice"></select>
+    </div>
+
+    <div>
+      <label>Text file</label>
+      <div class="drop-zone" id="dropZone">
+        Drop a .txt file here or click to browse
+        <input type="file" id="fileInput" accept=".txt" />
+      </div>
+    </div>
+
+    <button id="convertBtn" disabled>Convert to MP3</button>
+    <p id="status"></p>
+    <audio id="player" controls style="display:none"></audio>
+  </div>
+
+  <script>
+    const voiceSelect = document.getElementById("voice");
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const convertBtn = document.getElementById("convertBtn");
+    const status = document.getElementById("status");
+    const player = document.getElementById("player");
+
+    let selectedFile = null;
+
+    fetch("/voices")
+      .then(r => r.json())
+      .then(voices => {
+        const groups = { "🇩🇪 German": [], "🇬🇧 English": [] };
+        voices.forEach(v => {
+          if (v.startsWith("de-")) groups["🇩🇪 German"].push(v);
+          else groups["🇬🇧 English"].push(v);
+        });
+        for (const [label, list] of Object.entries(groups)) {
+          const og = document.createElement("optgroup");
+          og.label = label;
+          list.forEach(v => {
+            const opt = document.createElement("option");
+            opt.value = v;
+            opt.textContent = v;
+            og.appendChild(opt);
+          });
+          voiceSelect.appendChild(og);
+        }
+      });
+
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", e => { e.preventDefault(); dropZone.classList.add("dragover"); });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
+
+    function setFile(file) {
+      if (!file) return;
+      selectedFile = file;
+      dropZone.textContent = file.name;
+      dropZone.classList.add("has-file");
+      convertBtn.disabled = false;
+      status.textContent = "";
+      status.className = "";
+      player.style.display = "none";
+    }
+
+    convertBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+      convertBtn.disabled = true;
+      status.className = "";
+      status.textContent = "Converting…";
+      player.style.display = "none";
+
+      const form = new FormData();
+      form.append("file", selectedFile);
+      form.append("voice", voiceSelect.value);
+
+      try {
+        const res = await fetch("/tts", { method: "POST", body: form });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "Unknown error");
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        player.src = url;
+        player.style.display = "block";
+        status.textContent = "Done.";
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = selectedFile.name.replace(/\.txt$/, ".mp3");
+        a.click();
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = "error";
+      } finally {
+        convertBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
